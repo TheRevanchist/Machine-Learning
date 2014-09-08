@@ -1,0 +1,78 @@
+% a version of k-means which is used to cluster the Semeion Handwritten Digital Data Set.
+% the style of the program is based on the assignment from Machine Learning course (from Stanford) on Coursera
+
+function [centroids, idx, output] = my_kmeans(data, K)   
+    % load the data
+    input_weird = load(data, '-ascii');
+
+    % remove the last 10 values in order to extract the input
+    input = input_weird(:, [1:256]);
+    [m,n] = size(input);
+    
+    output_weird = input_weird(:, [257:266]);
+    output = zeros(m,1);
+
+    for i = 1:m
+        for j = 1:10
+            if output_weird(i,j) == 1
+                output(i) = j-1;
+            end
+        end
+    end
+    
+    centroids = zeros(K, n);
+    randidx = randperm(size(input, 1));
+    centroids = input(randidx(1:K), :);
+    previous_centroids = zeros(K, n);
+    threshold = 1;
+    
+    while norm(threshold) > 0
+        idx = findClosestCentroids(input, centroids);
+        previous_centroids = centroids;
+        centroids = computeCentroids(input, idx, K); 
+        threshold = centroids - previous_centroids;   
+    end   
+    
+    [n,m] = size(centroids);
+    for i = 1:n
+        dig = vec2mat(centroids(i,:), 16);
+        subplot(3,5,i);
+        imshow(dig);
+    end
+    
+end    
+
+function idx = findClosestCentroids(X, centroids)
+    K = size(centroids, 1);
+
+    idx = zeros(size(X,1), 1);
+
+    for i = 1:length(X)
+        minDist = Inf;
+        for j = 1:K
+            dist = norm(X(i,:) - centroids(j,:)) ^ 2;
+
+            if dist < minDist
+                minDist = dist;
+                idx(i) = j;
+            end
+        end
+    end
+end
+
+function centroids = computeCentroids(X, idx, K)
+    [m n] = size(X);
+    centroids = zeros(K, n);
+    for i = 1:K
+        count = 0;
+        for j = 1:m
+            if idx(j) == i
+                count = count + 1;
+                centroids(i,:) = centroids(i,:) + X(j,:);
+            end
+        end
+
+        centroids(i,:) = centroids(i,:) / count;
+    end
+end
+

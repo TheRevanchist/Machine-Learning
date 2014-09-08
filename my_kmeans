@@ -2,6 +2,9 @@
 % the style of the program is based on the assignment from Machine Learning course (from Stanford) on Coursera
 
 function [centroids, idx, output] = my_kmeans(data, K)   
+    % data - the data file
+    % K - number of clusters
+    
     % load the data
     input_weird = load(data, '-ascii');
 

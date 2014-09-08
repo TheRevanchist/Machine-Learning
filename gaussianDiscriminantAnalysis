@@ -1,0 +1,210 @@
+% We perform here Gaussian Discriminant Analysis on the famous Iris data set.
+
+function result = gaussian_discrimination(mu1, mu2, mu3, phi1, phi2, phi3, covariance, input)
+
+    l = length(input);
+    % calculate x - mu
+    x1 = input;
+    for i = 1:l
+        x1(i,:) = input(i,[1:4]) - mu1';
+    end    
+    
+    x2 = input;
+    for i = 1:l
+        x2(i,:) = input(i,[1:4]) - mu2';
+    end  
+    
+    x3 = input;
+    for i = 1:l
+        x3(i,:) = input(i,[1:4]) - mu3';
+    end  
+    
+    inverse_covariance = inv(covariance);
+    
+    % calculate the nominator on p(x|y=1) formula
+    nominator1 = zeros(l, 1);
+    
+    for i = 1:l
+        nominator1(i) = exp(-0.5 * x1(i,:) * inverse_covariance * x1(i,:)');
+    end   
+    
+    % calculate the nominator on p(x|y=2) formula
+    nominator2 = zeros(l, 1);
+    
+    for i = 1:l
+        nominator2(i) = exp(-0.5 * x2(i,:) * inverse_covariance * x2(i,:)');
+    end 
+    
+    % calculate the nominator on p(x|y=3) formula
+    nominator3 = zeros(l, 1);
+    
+    for i = 1:l
+        nominator3(i) = exp(-0.5 * x3(i,:) * inverse_covariance * x3(i,:)');
+    end  
+    
+    % calculate the denominator on p(x|y) formula
+    determinant_covariance = det(covariance);
+    
+    denominator = ((2 * pi) ^ (4/2)) * sqrt(determinant_covariance);
+    
+    % calculate probabilities p(x|y) for each of the three cases
+    
+    prob_X_given_Y_equal_1 = zeros(l, 1);
+    
+    for i = 1:l
+       prob_X_given_Y_equal_1(i) = nominator1(i) / denominator;
+    end   
+    
+    prob_X_given_Y_equal_2 = zeros(l, 1);
+    
+    for i = 1:l
+       prob_X_given_Y_equal_2(i) = nominator2(i) / denominator;
+    end  
+    
+    prob_X_given_Y_equal_3 = zeros(l, 1);
+    
+    for i = 1:l
+       prob_X_given_Y_equal_3(i) = nominator3(i) / denominator;
+    end 
+    
+    % calculate probabilities p(y)
+    prob_Y_equal_1 = phi1 ^ 1 * (1 - phi1) ^ (1 - 1);
+    prob_Y_equal_2 = phi2 ^ 2 * (1 - phi2) ^ (1 - 2);
+    prob_Y_equal_3 = phi3 ^ 3 * (1 - phi3) ^ (1 - 3);
+    
+    % calculate probabilities
+    
+    prob1 = prob_X_given_Y_equal_1 * prob_Y_equal_1;
+    prob2 = prob_X_given_Y_equal_2 * prob_Y_equal_2;
+    prob3 = prob_X_given_Y_equal_3 * prob_Y_equal_3;
+    
+    % return the results
+    models = [prob1 prob2 prob3];
+    result = zeros(l,1);
+    models = models';
+    maximum = max(models);
+    
+    % decide which model should be used for each of the x's
+    for i = 1:l
+        if maximum(i) == prob1(i)
+            result(i) = 1;
+        elseif maximum(i) == prob2(i)
+            result(i) = 2;
+        else
+            result(i) = 3;
+        end
+    end     
+end
+
+% This is the function which finds the parameters for the model
+
+function [mu1, mu2, mu3, phi1, phi2, phi3, covariance] = find_parameters(input)
+
+    % inititalize some variables
+    l = length(input);
+    output = input(:, 5);
+    
+    mu1 = zeros(4, 1);
+    mu1_count = 0;
+    mu2 = zeros(4, 1);
+    mu2_count = 0;
+    mu3 = zeros(4, 1);
+    mu3_count = 0;
+    
+    phi1 = 0;
+    phi2 = 0;
+    phi3 = 0;
+    
+    % find the mus
+    for i = 1:4
+        for j = 1:l
+            if output(j) == 1
+                mu1(i) = mu1(i) + input(j, i);
+                mu1_count = mu1_count + 1;
+            elseif output(j) == 2
+                mu2(i) = mu2(i) + input(j, i);
+                mu2_count = mu2_count + 1;
+            else
+                mu3(i) = mu3(i) + input(j, i);
+                mu3_count = mu3_count + 1;
+            end
+        end
+    end    
+    
+    for i = 1:4
+        mu1(i) = (mu1(i) * 4) / mu1_count;
+        mu2(i) = (mu2(i) * 4) / mu2_count;
+        mu3(i) = (mu3(i) * 4) / mu3_count;
+    end   
+    
+    mu = [mu1 mu2 mu3];
+    
+    % find the phis
+    for i = 1:l
+        if output(i) == 1
+            phi1 = phi1 + 1;
+        elseif output(i) == 2
+            phi2 = phi2 + 1;
+        else
+            phi3 = phi3 + 1;
+        end
+    end
+    
+    phi1 = phi1 / l;
+    phi2 = phi2 / l;
+    phi3 = phi3 / l;    
+    
+    % find the covariance
+    input2 = input(:, [1:4]);
+    
+    for i = 1:l
+        if output(i) == 1
+            muy = mu1;
+        elseif output(i) == 2
+            muy = mu2;
+        else
+            muy = mu3;
+        end    
+        input2(i,:) = input2(i,:) - muy';
+    end
+    covariance = cov(input2);
+end    
+
+% a small function which reads the file and creates the input on a suitable format
+function a = goodfile(filename)
+
+   [sepal_length, sepal_width, petal_length, petal_width, class] = textread(filename, '%f %f %f %f %s', 'delimiter', ','); 
+   
+   class_number = zeros(length(class),1);
+   
+   name_class = 'Iris-setosa';
+   
+   for i = 1:length(class)
+       index = strcmp(class(i), name_class);
+       if index == 1
+           class_number(i) = 1;
+       end
+   end
+   
+   name_class2 = 'Iris-versicolor';
+   
+   for i = 1:length(class)
+       index = strcmp(class(i), name_class2);
+       if index == 1
+           class_number(i) = 2;
+       end
+   end
+   
+   name_class3 = 'Iris-virginica';
+   
+   for i = 1:length(class)
+       index = strcmp(class(i), name_class3);
+       if index == 1
+           class_number(i) = 3;
+       end
+   end
+   
+   
+   a = [sepal_length, sepal_width, petal_length, petal_width, class_number];
+end   
+   

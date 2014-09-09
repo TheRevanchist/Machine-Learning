@@ -1,0 +1,98 @@
+% a version of latent class analysis (mixture of Bernoulli) which performs a clustering on the Semeion Handwritten Data Set.
+
+function cluster = latentClassAnalysis(data, K)
+    % data - the data file
+    % K - number of clusters
+    
+    dig = load(data, '-ascii');
+    dig = dig(:, [1:256]);
+    X = dig;
+    X = X';
+    threshold = 0.00001;
+    maxIterNum = 200;
+    [pi, mu] = initParams(X, K);
+    [D, N] = size(X);
+    iterNum = 0;
+    r = zeros(N,K);
+    preObjVal = computeObjVal(X, K, pi, mu);
+
+    %EM iteration
+    while iterNum < maxIterNum
+        iterNum = iterNum + 1;
+        %E step: computer responsibility of k component for nth sample
+        for n=1:N,
+            for k=1:K
+                r(n,k) = pi(k) * computeBernProb(X(:,n), mu(:,k));
+            end
+        end
+        z = sum(r,2);
+        for n=1:N
+            for k=1:K
+                r(n,k) = r(n,k)./ z(n);
+            end
+        end
+
+        %M step: argmaximum the log likelihood 
+        Nk = sum(r);
+        mu = X*r*diag(1./Nk);
+        pi = Nk / N; 
+        curObjVal = computeObjVal(X, K, pi, mu);
+
+        if abs(curObjVal-preObjVal) < threshold
+            break;
+        end
+
+        preObjVal = curObjVal;
+    end
+    
+    cluster = zeros(1593,1);
+    for i = 1:1593
+        for j = 1:K
+            if r(i,j) == max(r(i,:))
+                cluster(i) = j;
+            end
+        end    
+    end    
+    
+    figure(1);
+    for k=1:K,
+        m = mu(:,k);
+        dig = vec2mat(m,16);
+        subplot(3,5,k);
+        imshow(dig);
+    end
+end
+
+
+function [pi, mu] = initParams(X, K)
+    % initialize paramters 
+    [D,N] = size(X);
+    pi = ones(K,1)*1./K;
+    lmu = 0.25;
+    umu = 0.75;
+    mu = rand(D,K)*umu+lmu;
+end
+
+
+
+function p = computeBernProb(x, mu)
+    %compute Bernoulli pdf for sample x
+    D = length(x);
+    p=1;
+    for d=1:D
+        p = p * mu(d)^x(d)*(1-mu(d))^(1-x(d));
+    end
+end
+
+function f = computeObjVal(X, K, pi, mu)
+    %compute the value of log likelihood function
+    N = size(X,1);
+    f = 0;
+    for n=1:N
+        s=0;
+        for k=1:K
+            s = s + pi(k) * computeBernProb(X(:,n),mu(:,k));
+        end
+        f = f + log(s);
+    end
+end

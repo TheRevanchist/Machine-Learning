@@ -1,0 +1,52 @@
+function [weights, bias]= primalPerceptron(trainingset)
+/* An implementation of Rosenblatt's perceptron. It takes as input a training set and returns as output
+/* the weights and bias. The goodfileVar is just a small function that reads the file (in this case it is the Iris data set). 
+/* That function has been given in the end.
+    
+    tic
+    input = goodfileVar(trainingset);
+    desired_out = input(:, 5);
+    input = input(:, [1:4]);
+    [m,n] = size(input); 
+    rand('state', sum(100*clock));
+    weights = -1*2.*rand(1, 4);
+    bias=0;
+    K = (input*input'); 
+    R2 = max(diag(K));
+    count = 1;
+    coefficient = 0.1;
+    
+    while count > 0
+        count=0;
+        for i = 1:m
+            if desired_out(i)*(input(i,:)*weights'+bias) <= 0
+                weights =weights+ (desired_out(i)*input(i,:)')';
+                bias = bias+desired_out(i)*R2;
+                count = count+1;
+            end    
+        end
+    end    
+    toc    
+ end
+ 
+ function a = goodfileVar(filename)
+ /* The helper function which reads the data set and prepares it to be into a more suitable read format.
+
+   [sepal_length, sepal_width, petal_length, petal_width, class] = textread(filename, '%f %f %f %f %s', 'delimiter', ','); 
+   
+   class_number = zeros(length(class),1);
+   
+   name_class = 'Iris-setosa';
+   
+   for i = 1:length(class)
+       index = strcmp(class(i), name_class);
+       if index == 1
+           class_number(i) = 1;
+       else
+           class_number(i) = -1; 
+       end
+   end
+   
+   a = [sepal_length, sepal_width, petal_length, petal_width, class_number];
+end   
+   
